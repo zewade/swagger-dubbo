@@ -3,12 +3,13 @@ package com.deepoove.swagger.dubbo.http;
 import org.apache.dubbo.config.ApplicationConfig;
 import org.apache.dubbo.config.ReferenceConfig;
 import org.apache.dubbo.config.spring.ServiceBean;
-import org.apache.dubbo.config.spring.extension.SpringExtensionFactory;
+import org.apache.dubbo.config.spring.extension.SpringExtensionInjector;
+import org.apache.dubbo.rpc.model.ApplicationModel;
+import org.apache.dubbo.rpc.model.FrameworkModel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationContext;
 
-import java.lang.reflect.Field;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Map;
@@ -38,11 +39,19 @@ public class ReferenceManager {
         instance = new ReferenceManager();
         services = new HashSet<ServiceBean>();
         try {
-            Field field = SpringExtensionFactory.class.getDeclaredField("CONTEXTS");
-            field.setAccessible(true);
-            Set<ApplicationContext> contexts = (Set<ApplicationContext>) field.get(new SpringExtensionFactory());
-            for (ApplicationContext context : contexts) {
-                services.addAll(context.getBeansOfType(ServiceBean.class).values());
+//            Field field = SpringExtensionFactory.class.getDeclaredField("CONTEXTS");
+//            field.setAccessible(true);
+//            Set<ApplicationContext> contexts = (Set<ApplicationContext>) field.get(new SpringExtensionFactory());
+//            for (ApplicationContext context : contexts) {
+//                services.addAll(context.getBeansOfType(ServiceBean.class).values());
+//            }
+            // 枚举所有FrameworkModel
+            for (FrameworkModel frameworkModel : FrameworkModel.getAllInstances()) {
+                // 枚举FrameworkModel的所有Application
+                for (ApplicationModel applicationModel : frameworkModel.getApplicationModels()) {
+                    ApplicationContext applicationContext = SpringExtensionInjector.get(applicationModel).getContext();
+                    services.addAll(applicationContext.getBeansOfType(ServiceBean.class).values());
+                }
             }
         } catch (Exception e) {
             logger.error("Get All Dubbo Service Error", e);
@@ -72,7 +81,7 @@ public class ReferenceManager {
         for (ServiceBean<?> service : services) {
             if (interfaceClass.equals(service.getInterfaceClass().getName())) {
                 ReferenceConfig<Object> reference = new ReferenceConfig<Object>();
-                reference.setBootstrap(service.getBootstrap());
+//                reference.setBootstrap(service.getBootstrap());
                 reference.setRegistry(service.getRegistry());
                 reference.setRegistries(service.getRegistries());
                 reference.setInterface(service.getInterfaceClass());

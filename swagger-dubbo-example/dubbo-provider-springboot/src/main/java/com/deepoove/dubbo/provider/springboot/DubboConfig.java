@@ -1,12 +1,13 @@
 package com.deepoove.dubbo.provider.springboot;
 
+import org.apache.dubbo.config.spring.context.annotation.DubboComponentScan;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import com.alibaba.dubbo.config.ApplicationConfig;
 import com.alibaba.dubbo.config.ProtocolConfig;
 import com.alibaba.dubbo.config.RegistryConfig;
-import com.alibaba.dubbo.config.spring.context.annotation.DubboComponentScan;
+//import com.alibaba.dubbo.config.spring.context.annotation.DubboComponentScan;
 import com.deepoove.swagger.dubbo.annotations.EnableDubboSwagger;
 
 @Configuration
