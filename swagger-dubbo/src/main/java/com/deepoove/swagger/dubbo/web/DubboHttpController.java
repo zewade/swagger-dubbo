@@ -4,10 +4,12 @@ import com.deepoove.swagger.dubbo.http.HttpMatch;
 import com.deepoove.swagger.dubbo.http.ReferenceManager;
 import com.deepoove.swagger.dubbo.reader.NameDiscover;
 import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import io.swagger.annotations.Api;
 import io.swagger.util.Json;
 import io.swagger.util.PrimitiveType;
+import org.apache.dubbo.common.utils.MethodUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.aop.support.AopUtils;
@@ -24,8 +26,13 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.lang.reflect.Method;
+import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 import java.util.Map.Entry;
+import java.util.stream.Collectors;
 
 @Controller
 @RequestMapping("${swagger.dubbo.http:h}")
@@ -102,8 +109,11 @@ public class DubboHttpController {
             result = method.invoke(ref);
         } else {
             Object[] args = new Object[parameterNames.length];
-            Type[] parameterTypes = method.getGenericParameterTypes();
+//            Type[] parameterTypes = method.getGenericParameterTypes();
             Class<?>[] parameterClazz = method.getParameterTypes();
+            //处理泛型参数
+            Method genericMethod = MethodUtils.findMethod(Class.forName(interfaceClass), method.getName(), method.getParameterTypes());
+            Type[] parameterTypes = genericMethod.getGenericParameterTypes();
 
             for (int i = 0; i < parameterNames.length; i++) {
                 Object suggestPrameterValue = suggestPrameterValue(parameterTypes[i],
@@ -130,7 +140,18 @@ public class DubboHttpController {
         } else {
             if (null == parameter) return null;
             try {
-                return Json.mapper().readValue(parameter, cls);
+                //处理泛型参数
+                if (type instanceof ParameterizedType) {
+                    Type[] actualTypeArguments = ((ParameterizedType) type).getActualTypeArguments();
+                    Class<?>[] actualTypeClassArguments = new Class<?>[actualTypeArguments.length];
+                    for (int i = 0;i < actualTypeArguments.length;i++) {
+                        actualTypeClassArguments[i] = (Class<?>) actualTypeArguments[i];
+                    }
+                    JavaType javaType = Json.mapper().getTypeFactory().constructParametricType(cls, actualTypeClassArguments);
+                    return Json.mapper().readValue(parameter, javaType);
+                } else {
+                    return Json.mapper().readValue(parameter, cls);
+                }
             } catch (Exception e) {
                 throw new IllegalArgumentException("The parameter value [" + parameter + "] should be json of [" + cls.getName() + "] Type.", e);
             }
